@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>一元一次不等式對戰</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #667085;
+      --paper: #fffaf1;
+      --line: rgba(23, 32, 51, 0.14);
+      --left: #0f9f8f;
+      --right: #dd516c;
+      --left-soft: #dff8f2;
+      --right-soft: #ffe5ea;
+      --shadow: 0 16px 44px rgba(20, 28, 45, 0.16);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 48%, rgba(240, 174, 45, 0.16), transparent 34%),
+        linear-gradient(115deg, #edf9f5 0%, #fff9ee 48%, #fff0f2 100%);
+      color: var(--ink);
+      font-family: "Microsoft JhengHei", "PingFang TC", system-ui, -apple-system, sans-serif;
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    button { font: inherit; }
+
+    .arena {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      width: 100vw;
+      height: 100dvh;
+      min-height: 560px;
+    }
+
+    .side {
+      position: relative;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+    }
+
+    .side.left {
+      background:
+        linear-gradient(145deg, rgba(15, 159, 143, 0.18), rgba(255, 255, 255, 0.25)),
+        repeating-linear-gradient(45deg, rgba(15, 159, 143, 0.08) 0 10px, transparent 10px 24px);
+    }
+
+    .side.right {
+      background:
+        linear-gradient(35deg, rgba(221, 81, 108, 0.18), rgba(255, 255, 255, 0.25)),
+        repeating-linear-gradient(-45deg, rgba(221, 81, 108, 0.08) 0 10px, transparent 10px 24px);
+    }
+
+    .divider {
+      position: absolute;
+      inset: 0 calc(50% - 2px);
+      z-index: 8;
+      width: 4px;
+      background: linear-gradient(180deg, transparent, rgba(23, 32, 51, 0.35), transparent);
+      pointer-events: none;
+    }
+
+    .center-badge {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      z-index: 12;
+      display: grid;
+      place-items: center;
+      width: 112px;
+      height: 112px;
+      border: 4px solid rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+      background: #172033;
+      box-shadow: var(--shadow);
+      color: white;
+      font-weight: 900;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      line-height: 1.08;
+    }
+
+    .player-card {
+      position: relative;
+      width: min(86vh, 640px);
+      height: min(43vw, 510px);
+      min-width: 500px;
+      min-height: 390px;
+      padding: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.86);
+      border-radius: 8px;
+      background: rgba(255, 250, 241, 0.93);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .left .player-card { transform: rotate(90deg); }
+    .right .player-card { transform: rotate(-90deg); }
+
+    .top-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .name {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      font-size: 26px;
+      font-weight: 900;
+    }
+
+    .mark {
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      color: white;
+      font-size: 20px;
+    }
+
+    .left .mark { background: var(--left); }
+    .right .mark { background: var(--right); }
+
+    .score {
+      min-width: 88px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+      color: var(--muted);
+      text-align: center;
+      font-weight: 800;
+    }
+
+    .hearts {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 7px;
+      margin-bottom: 16px;
+    }
+
+    .heart {
+      height: 18px;
+      border-radius: 999px;
+      background: #e4e7ec;
+      box-shadow: inset 0 0 0 1px rgba(23, 32, 51, 0.08);
+      transition: transform 0.16s ease, background 0.16s ease, opacity 0.16s ease;
+    }
+
+    .left .heart.alive { background: linear-gradient(90deg, #13b7a3, #69d8b6); }
+    .right .heart.alive { background: linear-gradient(90deg, #ec6480, #ff9a84); }
+    .heart.lost { opacity: 0.48; transform: scaleX(0.72); }
+
+    .question-box {
+      display: grid;
+      align-content: center;
+      min-height: 106px;
+      margin-bottom: 14px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+    }
+
+    .question-label {
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .question {
+      font-size: clamp(27px, 4.2vh, 42px);
+      line-height: 1.16;
+      font-weight: 900;
+    }
+
+    .options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .option {
+      min-height: 68px;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      background: #ffffff;
+      box-shadow: 0 8px 18px rgba(20, 28, 45, 0.1);
+      color: var(--ink);
+      font-size: clamp(22px, 3vh, 32px);
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+    }
+
+    .option:active { transform: scale(0.96); }
+    .left .option:hover, .left .option:focus-visible { border-color: var(--left); background: var(--left-soft); }
+    .right .option:hover, .right .option:focus-visible { border-color: var(--right); background: var(--right-soft); }
+
+    .feedback {
+      display: grid;
+      place-items: center;
+      height: 34px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    .feedback.good { color: #087f6f; }
+    .feedback.try { color: #bd3e56; }
+    .flash { animation: hitFlash 0.36s ease; }
+    .shake { animation: shake 0.36s ease; }
+
+    .winner-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+      display: none;
+      place-items: center;
+      overflow: hidden;
+      background: rgba(255, 250, 241, 0.78);
+      backdrop-filter: blur(6px);
+    }
+
+    .winner-overlay.show { display: grid; }
+
+    .result-card {
+      position: relative;
+      z-index: 2;
+      width: min(78vw, 640px);
+      padding: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+
+    .result-title {
+      margin: 0 0 8px;
+      font-size: clamp(42px, 7vw, 84px);
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    .result-subtitle {
+      margin: 0 0 22px;
+      color: var(--muted);
+      font-size: clamp(22px, 3vw, 32px);
+      font-weight: 900;
+    }
+
+    .restart {
+      min-width: 180px;
+      min-height: 62px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--ink);
+      color: white;
+      font-size: 24px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .rain-word,
+    .petal {
+      position: absolute;
+      top: -80px;
+      z-index: 1;
+      pointer-events: none;
+      animation: rainFall linear forwards;
+    }
+
+    .rain-word {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.76);
+      color: var(--ink);
+      font-size: 22px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .petal {
+      width: 18px;
+      height: 28px;
+      border-radius: 18px 4px 18px 4px;
+      background: #ff7da4;
+      opacity: 0.86;
+      animation-name: petalFall;
+    }
+
+    @keyframes hitFlash {
+      0%, 100% { filter: none; }
+      45% { filter: brightness(1.18) saturate(1.3); }
+    }
+
+    @keyframes shake {
+      0%, 100% { translate: 0 0; }
+      25% { translate: -7px 0; }
+      50% { translate: 7px 0; }
+      75% { translate: -4px 0; }
+    }
+
+    @keyframes rainFall {
+      from { transform: translateY(-80px) rotate(0deg); opacity: 0; }
+      10% { opacity: 1; }
+      to { transform: translateY(calc(100dvh + 120px)) rotate(14deg); opacity: 0.1; }
+    }
+
+    @keyframes petalFall {
+      from { transform: translate3d(0, -80px, 0) rotate(0deg); }
+      to { transform: translate3d(var(--drift), calc(100dvh + 140px), 0) rotate(720deg); }
+    }
+
+    @media (orientation: portrait) {
+      .player-card {
+        width: min(82vh, 560px);
+        height: min(43vw, 430px);
+        min-width: 430px;
+        min-height: 340px;
+        padding: 18px;
+      }
+
+      .question-box { min-height: 88px; }
+      .option { min-height: 58px; }
+      .center-badge { width: 92px; height: 92px; font-size: 14px; }
+    }
+
+    @media (max-height: 620px) {
+      .player-card {
+        width: min(88vh, 560px);
+        height: min(43vw, 450px);
+        min-width: 430px;
+        min-height: 332px;
+        padding: 16px;
+      }
+
+      .top-row,
+      .hearts,
+      .question-box { margin-bottom: 9px; }
+      .question-box { min-height: 84px; }
+      .option { min-height: 54px; }
+      .feedback { margin-top: 8px; height: 28px; font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="arena" aria-label="一元一次不等式雙人對戰">
+    <section class="side left" data-side="left">
+      <div class="player-card" id="card-left">
+        <div class="top-row">
+          <div class="name"><span class="mark">左</span><span>左方挑戰者</span></div>
+          <div class="score" id="score-left">7 / 7</div>
+        </div>
+        <div class="hearts" id="hearts-left" aria-label="左方生命值"></div>
+        <div class="question-box">
+          <div class="question-label">選出不等式的解</div>
+          <div class="question" id="question-left"></div>
+        </div>
+        <div class="options" id="options-left"></div>
+        <div class="feedback" id="feedback-left">答對就攻擊對方</div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+    <div class="center-badge">不等式<br>對戰</div>
+
+    <section class="side right" data-side="right">
+      <div class="player-card" id="card-right">
+        <div class="top-row">
+          <div class="name"><span class="mark">右</span><span>右方挑戰者</span></div>
+          <div class="score" id="score-right">7 / 7</div>
+        </div>
+        <div class="hearts" id="hearts-right" aria-label="右方生命值"></div>
+        <div class="question-box">
+          <div class="question-label">選出不等式的解</div>
+          <div class="question" id="question-right"></div>
+        </div>
+        <div class="options" id="options-right"></div>
+        <div class="feedback" id="feedback-right">答對就攻擊對方</div>
+      </div>
+    </section>
+
+    <div class="winner-overlay" id="winner-overlay" role="dialog" aria-modal="true" aria-live="polite">
+      <div class="result-card">
+        <h1 class="result-title" id="result-title">恭喜獲勝！</h1>
+        <p class="result-subtitle" id="result-subtitle">再來一場，速度和準確度一起練。</p>
+        <button class="restart" id="restart" type="button">重新開始</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const maxLives = 7;
+
+    const bank = [
+      { q: "x + 3 > 7", a: "x > 4", o: ["x > 4", "x < 4", "x > 10", "x < 10"] },
+      { q: "x - 5 < 2", a: "x < 7", o: ["x < 7", "x > 7", "x < -3", "x > -3"] },
+      { q: "2x > 10", a: "x > 5", o: ["x > 5", "x < 5", "x > 8", "x < 8"] },
+      { q: "3x < 12", a: "x < 4", o: ["x < 4", "x > 4", "x < 15", "x > 15"] },
+      { q: "x + 8 >= 11", a: "x >= 3", o: ["x >= 3", "x <= 3", "x >= 19", "x <= 19"] },
+      { q: "x - 6 <= 1", a: "x <= 7", o: ["x <= 7", "x >= 7", "x <= -5", "x >= -5"] },
+      { q: "4x >= 20", a: "x >= 5", o: ["x >= 5", "x <= 5", "x >= 16", "x <= 16"] },
+      { q: "5x <= 15", a: "x <= 3", o: ["x <= 3", "x >= 3", "x <= 10", "x >= 10"] },
+      { q: "x + 2 < 9", a: "x < 7", o: ["x < 7", "x > 7", "x < 11", "x > 11"] },
+      { q: "x - 4 > 6", a: "x > 10", o: ["x > 10", "x < 10", "x > 2", "x < 2"] },
+      { q: "2x + 1 > 9", a: "x > 4", o: ["x > 4", "x < 4", "x > 5", "x < 5"] },
+      { q: "3x - 2 < 10", a: "x < 4", o: ["x < 4", "x > 4", "x < 8", "x > 8"] },
+      { q: "2x + 5 <= 13", a: "x <= 4", o: ["x <= 4", "x >= 4", "x <= 9", "x >= 9"] },
+      { q: "3x + 1 >= 7", a: "x >= 2", o: ["x >= 2", "x <= 2", "x >= 6", "x <= 6"] },
+      { q: "x / 2 > 4", a: "x > 8", o: ["x > 8", "x < 8", "x > 2", "x < 2"] },
+      { q: "x / 3 <= 5", a: "x <= 15", o: ["x <= 15", "x >= 15", "x <= 8", "x >= 8"] },
+      { q: "x + 9 >= 14", a: "x >= 5", o: ["x >= 5", "x <= 5", "x >= 23", "x <= 23"] },
+      { q: "x - 3 <= 4", a: "x <= 7", o: ["x <= 7", "x >= 7", "x <= 1", "x >= 1"] },
+      { q: "6x > 18", a: "x > 3", o: ["x > 3", "x < 3", "x > 24", "x < 24"] },
+      { q: "7x < 21", a: "x < 3", o: ["x < 3", "x > 3", "x < 28", "x > 28"] }
+    ];
+
+    const praiseWords = ["太棒了", "恭喜", "勝利", "答得漂亮", "數學高手", "漂亮一擊", "完全正確", "再接再厲"];
+    const cheerWords = ["別放棄", "你很接近", "繼續練習", "下回合加油", "穩住節奏", "越練越強", "再試一次", "勇敢挑戰"];
+    const colors = ["#ff7da4", "#ffd166", "#7bdff2", "#b2f7af", "#f7aef8", "#ff9f7d", "#9ad5ff"];
+
+    const state = {
+      left: { lives: maxLives, current: null, locked: false },
+      right: { lives: maxLives, current: null, locked: false },
+      ended: false
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const opponentOf = (side) => side === "left" ? "right" : "left";
+
+    function shuffle(items) {
+      const copy = [...items];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function makeHearts(side) {
+      const wrap = $("hearts-" + side);
+      wrap.innerHTML = "";
+      for (let i = 0; i < maxLives; i++) {
+        const heart = document.createElement("div");
+        heart.className = "heart alive";
+        wrap.appendChild(heart);
+      }
+    }
+
+    function updateLives(side) {
+      $("score-" + side).textContent = state[side].lives + " / " + maxLives;
+      [...$("hearts-" + side).children].forEach((heart, index) => {
+        const alive = index < state[side].lives;
+        heart.classList.toggle("alive", alive);
+        heart.classList.toggle("lost", !alive);
+      });
+    }
+
+    function nextQuestion(side) {
+      const item = bank[Math.floor(Math.random() * bank.length)];
+      state[side].current = item;
+      state[side].locked = false;
+      $("question-" + side).textContent = item.q;
+      $("feedback-" + side).className = "feedback";
+      $("feedback-" + side).textContent = "答對就攻擊對方";
+
+      const options = $("options-" + side);
+      options.innerHTML = "";
+      shuffle(item.o).forEach((text) => {
+        const btn = document.createElement("button");
+        btn.className = "option";
+        btn.type = "button";
+        btn.textContent = text;
+        btn.addEventListener("click", () => choose(side, text));
+        options.appendChild(btn);
+      });
+    }
+
+    function choose(side, answer) {
+      if (state.ended || state[side].locked) return;
+      state[side].locked = true;
+
+      const correct = answer === state[side].current.a;
+      const feedback = $("feedback-" + side);
+      const card = $("card-" + side);
+
+      if (correct) {
+        const target = opponentOf(side);
+        state[target].lives = Math.max(0, state[target].lives - 1);
+        updateLives(target);
+        feedback.className = "feedback good";
+        feedback.textContent = "答對！攻擊成功";
+        $("card-" + target).classList.add("shake");
+        card.classList.add("flash");
+
+        setTimeout(() => {
+          $("card-" + target).classList.remove("shake");
+          card.classList.remove("flash");
+        }, 380);
+
+        if (state[target].lives <= 0) {
+          setTimeout(() => finish(side, target), 380);
+          return;
+        }
+      } else {
+        feedback.className = "feedback try";
+        feedback.textContent = "再想想，下一題！";
+        card.classList.add("shake");
+        setTimeout(() => card.classList.remove("shake"), 380);
+      }
+
+      setTimeout(() => nextQuestion(side), 520);
+    }
+
+    function finish(winner, loser) {
+      if (state.ended) return;
+      state.ended = true;
+      state.left.locked = true;
+      state.right.locked = true;
+
+      const winnerName = winner === "left" ? "左方挑戰者" : "右方挑戰者";
+      const loserName = loser === "left" ? "左方挑戰者" : "右方挑戰者";
+      $("result-title").textContent = winnerName + "獲勝！";
+      $("result-subtitle").textContent = loserName + "也很棒，下一場一定更強。";
+      $("winner-overlay").classList.add("show");
+      makeRain();
+    }
+
+    function makeRain() {
+      const overlay = $("winner-overlay");
+      [...overlay.querySelectorAll(".rain-word, .petal")].forEach((node) => node.remove());
+
+      for (let i = 0; i < 52; i++) {
+        const petal = document.createElement("div");
+        petal.className = "petal";
+        petal.style.left = Math.random() * 100 + "vw";
+        petal.style.background = colors[i % colors.length];
+        petal.style.animationDelay = Math.random() * 2.4 + "s";
+        petal.style.animationDuration = 4.4 + Math.random() * 2.8 + "s";
+        petal.style.setProperty("--drift", (Math.random() * 220 - 110) + "px");
+        overlay.appendChild(petal);
+      }
+
+      for (let i = 0; i < 34; i++) {
+        const word = document.createElement("div");
+        word.className = "rain-word";
+        word.textContent = i % 3 === 0 ? cheerWords[i % cheerWords.length] : praiseWords[i % praiseWords.length];
+        word.style.left = Math.random() * 86 + 3 + "vw";
+        word.style.animationDelay = Math.random() * 2.8 + "s";
+        word.style.animationDuration = 4.2 + Math.random() * 3.2 + "s";
+        overlay.appendChild(word);
+      }
+    }
+
+    function restart() {
+      state.left.lives = maxLives;
+      state.right.lives = maxLives;
+      state.left.locked = false;
+      state.right.locked = false;
+      state.ended = false;
+      $("winner-overlay").classList.remove("show");
+      makeHearts("left");
+      makeHearts("right");
+      updateLives("left");
+      updateLives("right");
+      nextQuestion("left");
+      nextQuestion("right");
+    }
+
+    $("restart").addEventListener("click", restart);
+    restart();
+  </script>
+</body>
+</html>
